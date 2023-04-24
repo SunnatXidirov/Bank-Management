@@ -19,6 +19,6 @@ public class TransferConcessionTariff {
     @Enumerated(EnumType.STRING)
     private TransferType transferType;
     @Column(nullable = false)
-    private BigDecimal limit;
+    private BigDecimal transferLimit;
     private boolean active;
 }

@@ -1,4 +1,10 @@
 package uz.pdp.onlinebanking.repository;
 
-public interface CurrencyRateRepository {
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import uz.pdp.onlinebanking.entity.CurrencyRate;
+
+@Repository
+public interface CurrencyRateRepository extends JpaRepository<CurrencyRate,Integer> {
+
 }

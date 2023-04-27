@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,8 +17,7 @@ public class Payment {
     private Integer id;
     @ManyToOne
     private Card fromCardId;
-    @ManyToOne
-    private CommissionType commissionType;
+    private BigDecimal sum;
     @ManyToOne
     private ServiceCommission serviceCommission;
 

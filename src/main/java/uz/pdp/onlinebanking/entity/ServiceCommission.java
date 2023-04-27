@@ -16,5 +16,7 @@ public class ServiceCommission {
     private Integer id;
     @Column(nullable = false)
     private float commissionPercent;
+    @ManyToOne
+    private PaymentService paymentService;
     private boolean active;
 }

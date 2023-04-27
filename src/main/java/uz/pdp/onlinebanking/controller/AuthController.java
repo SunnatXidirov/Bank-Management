@@ -3,14 +3,16 @@ package uz.pdp.onlinebanking.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import uz.pdp.onlinebanking.payload.RestToken;
 import uz.pdp.onlinebanking.payload.SingIn;
 import uz.pdp.onlinebanking.payload.SingUp;
 import uz.pdp.onlinebanking.service.AuthService;
 
-@Controller
+@RestController
 @RequestMapping("/api/auth/")
 @RequiredArgsConstructor
 public class AuthController {

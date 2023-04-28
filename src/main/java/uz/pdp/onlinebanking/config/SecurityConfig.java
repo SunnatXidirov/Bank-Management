@@ -40,7 +40,7 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeHttpRequests((authz) -> authz
-                        .antMatchers("index", "/", "/api/auth/**","/api/bot/","/api/conversion/**")
+                        .antMatchers("index", "/", "/api/auth/**","/api/conversion/**","/api/bot/**","/api/payment/**","/api/paymentService/**","/api/serviceCommission/**","/api/paymentCategory/**")
                         .permitAll()
                         .anyRequest()
                         .authenticated()

@@ -1,4 +1,7 @@
 package uz.pdp.onlinebanking.repository;
 
-public interface PaymentServiceRepository {
+import org.springframework.data.jpa.repository.JpaRepository;
+import uz.pdp.onlinebanking.entity.PaymentService;
+
+public interface PaymentServiceRepository extends JpaRepository<PaymentService, Integer> {
 }

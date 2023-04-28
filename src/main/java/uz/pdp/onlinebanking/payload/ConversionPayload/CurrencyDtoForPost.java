@@ -1,16 +1,14 @@
-package uz.pdp.onlinebanking.payload;
+package uz.pdp.onlinebanking.payload.ConversionPayload;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Column;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CurrencyDto {
-    private Integer id;
+public class CurrencyDtoForPost {
     private String name;
     private String abbr;
     private boolean active;

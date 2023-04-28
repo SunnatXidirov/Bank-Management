@@ -4,9 +4,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import uz.pdp.onlinebanking.entity.Roles;
+import uz.pdp.onlinebanking.entity.Users;
+import uz.pdp.onlinebanking.entity.enums.RoleName;
 import uz.pdp.onlinebanking.repository.RoleRepository;
 import uz.pdp.onlinebanking.repository.UserRepository;
 import uz.pdp.onlinebanking.security.JwtProvider;
+
+import java.util.Collections;
+import java.util.HashSet;
 
 @Component
 public class DataLoader implements CommandLineRunner {
@@ -49,6 +55,6 @@ public class DataLoader implements CommandLineRunner {
 //
 //        userRepository.save(user1);
 //        userRepository.save(user2);
-//
+
     }
 }

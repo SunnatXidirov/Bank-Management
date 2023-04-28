@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import uz.pdp.onlinebanking.entity.enums.ActionType;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -23,8 +24,9 @@ public class Conversion {
     @ManyToOne
     private Card targetCardId;
     private BigDecimal amount;
-    @ManyToOne
-    private CommissionType commissionType;
+    @Column(nullable = false)
+    @Enumerated(value = EnumType.STRING)
+    private ActionType actionType;
     @Column(nullable = false)
     private Date date;
 }

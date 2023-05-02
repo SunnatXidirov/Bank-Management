@@ -3,18 +3,19 @@ package uz.pdp.onlinebanking.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import uz.pdp.onlinebanking.entity.Card;
-import uz.pdp.onlinebanking.entity.Conversion;
-import uz.pdp.onlinebanking.entity.CurrencyRate;
-import uz.pdp.onlinebanking.entity.Users;
+import uz.pdp.onlinebanking.entity.*;
+import uz.pdp.onlinebanking.entity.enums.ActionType;
+import uz.pdp.onlinebanking.entity.enums.CurrencyAbbr;
 import uz.pdp.onlinebanking.payload.ConversionPayload.ConversionDto;
 import uz.pdp.onlinebanking.payload.ConversionPayload.Respons;
 import uz.pdp.onlinebanking.repository.CardRepository;
 import uz.pdp.onlinebanking.repository.ConversionRepository;
 import uz.pdp.onlinebanking.repository.CurrencyRateRepository;
+import uz.pdp.onlinebanking.repository.CurrencyRepository;
 
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -26,159 +27,76 @@ public class ConversionService {
     private final ObjectMapper objectMapper;
     private final CurrencyRateRepository currencyRateRepositorys;
     private final CardRepository cardRepository;
+    private final CurrencyRepository currencyRepository;
 
     public List<CurrencyRate> show() {
-        return currencyRateRepositorys.existsByActiveTrue();
+      return currencyRateRepositorys.findAllByActiveTrue();
     }
 
     @Transactional
-    public Respons buy(ConversionDto conversionDto, Integer currencyId) {
+    public Respons convension(ConversionDto conversionDto) {
 
-        if (conversionDto.getActionType().equals("BUY")) {
+        Card fromCard = cardRepository.findById(conversionDto.getFromCardId()).orElseThrow(
+                () -> new IllegalArgumentException("Card not found"));
 
-            Optional<Card> optionalFromCard = cardRepository.findById(conversionDto.getFromCardId());
-            Optional<Card> optionalTargetCard = cardRepository.findById(conversionDto.getTargetCardId());
+        Card toCard = cardRepository.findById(conversionDto.getTargetCardId()).orElseThrow(
+                () -> new IllegalArgumentException("Card not found"));
 
-            //KARTANILARNI TEKSHIRDIM
-            if (optionalTargetCard.isPresent() && optionalFromCard.isPresent()) {
+        Optional<Currency> optionalCurrency = currencyRepository.findByIdAndActiveTrue(conversionDto.getCurrencyId());
+        if (optionalCurrency.isPresent()) {
 
-                Card targetCard = optionalTargetCard.get();
-                Card fromCard = optionalFromCard.get();
+            Currency currency = optionalCurrency.get();
+            BigDecimal totalSum = new BigDecimal(0);
 
-                //KARTALARNING YAROQLILIK MUDATINI TEKSHIRDIM
-                if (targetCard.getExpireDate().before(new Date()) && fromCard.getExpireDate().before(new Date())) {
+            if (conversionDto.getActionType().equals(ActionType.BUY)) {
 
-                    //VISA KARTAGA TEKSHIRISH
-                    if (targetCard.getCvv() != 0) {
+                CurrencyRate buyRate = currencyRateRepositorys.findByCurrencyAndActionTypeAndActiveTrue(currency, ActionType.BUY);
+                totalSum.add(conversionDto.getAmount().multiply(buyRate.getRate()));
 
-                        Users targetUsersId = targetCard.getUsersId();
-                        Users fromUsersId = fromCard.getUsersId();
+                if (fromCard.getCvv() == null && toCard.getCvv() != null && toCard.getCurrency().getId().equals(currency.getId()) &&
+                        fromCard.getBalance().compareTo(conversionDto.getAmount()) >= 0) {
 
-                        //USERLARNI TEKSHIRISH
-                        if (targetUsersId.isActive() && fromUsersId.isActive()) {
-
-                            CurrencyRate currencyRate = currencyRateRepositorys.findByCurrency_Id(currencyId);
-                            String actionType = currencyRate.getActionType().toString();
-
-                            if (actionType.equals("BUY")) {
-                                long rate = currencyRate.getRate().longValue();
-                                long fromCardBalance = fromCard.getBalance().longValue();
-                                long targetCardBalance = targetCard.getBalance().longValue();
-                                long amount = conversionDto.getAmount().longValue();
-                                long checkBalance = fromCardBalance - amount * rate;
-
-                                //KARTANING MABLAG'INI TEKSHIRDIM
-                                if (checkBalance > 0) {
-
-                                    fromCard.setBalance(BigDecimal.valueOf(checkBalance));
-                                    targetCard.setBalance(BigDecimal.valueOf(targetCardBalance + rate));
-                                    cardRepository.save(fromCard);
-                                    cardRepository.save(targetCard);
-                                    Conversion conversion = objectMapper.convertValue(conversionDto, Conversion.class);
-                                    conversion.setDate(new Date());
-                                    conversionRepositorys.save(conversion);
-                                    return new Respons("Tranzaksiya muvofaqiyatli amalga oshdi", true);
-
-                                } else {
-                                    return new Respons("Mablag' yetarli emas", false);
-                                }
-                            } else {
-                                return new Respons("action type xato", false);
-                            }
-
-                        } else {
-                            return new Respons("User blocked", false);
-                        }
-
-                    } else {
-                        return new Respons("Cvv da xatolik", false);
-                    }
+                    // 1 CHI KARTADAN SUMMA YECHISH
+                    fromCard.setBalance(fromCard.getBalance().subtract(totalSum));
+                    // 2 CHI KARTAGA SUMMA QO'SHISH
+                    toCard.setBalance(toCard.getBalance().add(conversionDto.getAmount()));
+                    cardRepository.save(fromCard);
+                    cardRepository.save(toCard);
+                    Conversion conversion = objectMapper.convertValue(conversionDto, Conversion.class);
+                    conversion.setDate(new Date());
+                    conversionRepositorys.save(conversion);
+                    return new Respons("Tranzaksiya muvofaqiyatli amalga oshdi", true);
 
                 } else {
-                    return new Respons("Muddati o'tgan karta", false);
+                    return new Respons("Xato karta kiritildi", false);
                 }
-
             } else {
-                return new Respons("Bunday karta topilmadi", false);
-            }
 
-        }
-        return new Respons("Xato buyruq", false);
-    }
+                if (fromCard.getCvv() != null && toCard.getCvv() == null && fromCard.getCurrency().getId().equals(currency.getId()) &&
+                        fromCard.getBalance().compareTo(conversionDto.getAmount()) >= 0) {
 
-    @Transactional
-    public Respons sell(ConversionDto conversionDto, Integer currencyId) {
+                    CurrencyRate buyRate = currencyRateRepositorys.
+                            findByCurrencyAndActionTypeAndActiveTrue(currency, ActionType.BUY);
+                    totalSum.add(conversionDto.getAmount().multiply(buyRate.getRate()));
 
-        if (conversionDto.getActionType().equals("SELL")) {
+                    // 1 CHI KARTADAN SUMMA YECHISH
+                    fromCard.setBalance(fromCard.getBalance().subtract(conversionDto.getAmount()));
+                    // 2 CHI KARTAGA SUMMA QO'SHISH
+                    toCard.setBalance(toCard.getBalance().add(totalSum));
+                    cardRepository.save(fromCard);
+                    cardRepository.save(toCard);
+                    Conversion conversion = objectMapper.convertValue(conversionDto, Conversion.class);
+                    conversion.setDate(new Date());
+                    conversionRepositorys.save(conversion);
+                    return new Respons("Tranzaksiya muvofaqiyatli amalga oshdi", true);
 
-            Optional<Card> optionalFromCard = cardRepository.findById(conversionDto.getFromCardId());
-            Optional<Card> optionalTargetCard = cardRepository.findById(conversionDto.getTargetCardId());
-
-            //KARTANILARNI TEKSHIRDIM
-            if (optionalTargetCard.isPresent() && optionalFromCard.isPresent()) {
-
-                Card targetCard = optionalTargetCard.get();
-                Card fromCard = optionalFromCard.get();
-
-                //KARTALARNING YAROQLILIK MUDATINI TEKSHIRDIM
-                if (targetCard.getExpireDate().before(new Date()) && fromCard.getExpireDate().before(new Date())) {
-
-                    //VISA KARTAGA TEKSHIRISH
-                    if (fromCard.getCvv() != 0) {
-
-                        Users targetUsersId = targetCard.getUsersId();
-                        Users fromUsersId = fromCard.getUsersId();
-
-                        //USERLARNI TEKSHIRISH
-                        if (targetUsersId.isActive() && fromUsersId.isActive()) {
-
-                            CurrencyRate currencyRate = currencyRateRepositorys.findByCurrency_Id(currencyId);
-                            String actionType = currencyRate.getActionType().toString();
-
-                            if (actionType.equals("SELL")) {
-                                long rate = currencyRate.getRate().longValue();
-                                long fromCardBalance = fromCard.getBalance().longValue();
-                                long targetCardBalance = targetCard.getBalance().longValue();
-                                long amount = conversionDto.getAmount().longValue();
-                                long checkBalance = fromCardBalance - amount;
-
-                                //KARTANING MABLAG'INI TEKSHIRDIM
-                                if (checkBalance > 0) {
-
-                                    fromCard.setBalance(BigDecimal.valueOf(checkBalance));
-                                    targetCard.setBalance(BigDecimal.valueOf(targetCardBalance + rate * amount));
-                                    cardRepository.save(fromCard);
-                                    cardRepository.save(targetCard);
-                                    Conversion conversion = objectMapper.convertValue(conversionDto, Conversion.class);
-                                    conversion.setDate(new Date());
-                                    conversionRepositorys.save(conversion);
-                                    return new Respons("Tranzaksiya muvofaqiyatli amalga oshdi", true);
-
-                                } else {
-                                    return new Respons("Mablag' yetarli emas", false);
-                                }
-                            }else {
-                                return new Respons("action type xato", false);
-                            }
-
-                        } else {
-                            return new Respons("User blocked", false);
-                        }
-
-                    } else {
-                        return new Respons("Cvv da xatolik", false);
-                    }
 
                 } else {
-                    return new Respons("Muddati o'tgan karta", false);
+                    return new Respons("Xato karta kiritildi", false);
                 }
-
-            } else {
-                return new Respons("Bunday karta topilmadi", false);
             }
-
         }
-        return new Respons("Xato buyruq", false);
+        return new Respons("Valyutada xatolik", false);
     }
 }
 

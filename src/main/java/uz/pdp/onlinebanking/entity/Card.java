@@ -22,8 +22,10 @@ public class Card {
     @ManyToOne
     private Users usersId;
     private Date expireDate;
-    private byte cvv;
+    private Integer cvv;
     @ManyToOne
     private Tariff tariffId;
     private BigDecimal balance;
+    @ManyToOne
+    private Currency currency;
 }

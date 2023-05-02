@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/conversion")
+@RequestMapping("api/conversion/")
 public class ConversionCurrencyRateController {
     private final ConversionCurrencyRateService currencyRateServices;
 

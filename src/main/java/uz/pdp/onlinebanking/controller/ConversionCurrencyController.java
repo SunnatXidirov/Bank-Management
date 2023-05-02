@@ -14,7 +14,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/conversion")
+@RequestMapping("/api/conversion/")
 public class ConversionCurrencyController {
 
     private final ConversionCurrencyService currencyServices;
